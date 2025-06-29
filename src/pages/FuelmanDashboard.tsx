@@ -7,18 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
+import { useLogs } from '../hooks/useLogs';
+import { useUnits } from '../hooks/useUnits';
 
 const FuelmanDashboard = () => {
   const [activeTab, setActiveTab] = useState('mulai');
   const [location, setLocation] = useState('');
+  const { units } = useUnits();
+  const { createFuelmanLog } = useLogs();
   const [unloadingData, setUnloadingData] = useState({
-    waktuMulai: '',
-    waktuSelesai: '',
-    flowmeterA: '',
-    flowmeterB: '',
-    fmAwal: '',
-    fmAkhir: '',
-    fotoSegel: null as File | null
+    unit_id: '',
+    waktu_mulai: '',
+    waktu_selesai: '',
+    flowmeter_a: '',
+    flowmeter_b: '',
+    fm_awal: '',
+    fm_akhir: '',
+    foto_segel_url: ''
   });
 
   const flowmeters = [
@@ -44,28 +49,50 @@ const FuelmanDashboard = () => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUnloadingData({...unloadingData, fotoSegel: file});
-      toast.success('Foto segel berhasil diupload!');
-    }
-  };
-
-  const handleSubmitMulai = () => {
-    if (!unloadingData.waktuMulai || !location || !unloadingData.flowmeterA || !unloadingData.fmAwal) {
+  const handleSubmitMulai = async () => {
+    if (!unloadingData.unit_id || !unloadingData.waktu_mulai || !location || !unloadingData.flowmeter_a || !unloadingData.fm_awal) {
       toast.error('Semua field harus diisi!');
       return;
     }
-    toast.success('Data mulai unloading berhasil disimpan!');
+
+    const result = await createFuelmanLog({
+      unit_id: unloadingData.unit_id,
+      waktu_mulai: unloadingData.waktu_mulai,
+      lokasi: location,
+      flowmeter_a: unloadingData.flowmeter_a,
+      fm_awal: parseFloat(unloadingData.fm_awal),
+      status: 'mulai'
+    });
+
+    if (result) {
+      toast.success('Data mulai unloading berhasil disimpan!');
+      setUnloadingData(prev => ({ ...prev, waktu_mulai: '', flowmeter_a: '', fm_awal: '' }));
+    } else {
+      toast.error('Gagal menyimpan data!');
+    }
   };
 
-  const handleSubmitSelesai = () => {
-    if (!unloadingData.waktuSelesai || !location || !unloadingData.flowmeterB || !unloadingData.fmAkhir) {
+  const handleSubmitSelesai = async () => {
+    if (!unloadingData.unit_id || !unloadingData.waktu_selesai || !location || !unloadingData.flowmeter_b || !unloadingData.fm_akhir) {
       toast.error('Semua field harus diisi!');
       return;
     }
-    toast.success('Proses unloading selesai! Data berhasil disimpan.');
+
+    const result = await createFuelmanLog({
+      unit_id: unloadingData.unit_id,
+      waktu_selesai: unloadingData.waktu_selesai,
+      lokasi: location,
+      flowmeter_b: unloadingData.flowmeter_b,
+      fm_akhir: parseFloat(unloadingData.fm_akhir),
+      status: 'selesai'
+    });
+
+    if (result) {
+      toast.success('Proses unloading selesai! Data berhasil disimpan.');
+      setUnloadingData(prev => ({ ...prev, waktu_selesai: '', flowmeter_b: '', fm_akhir: '' }));
+    } else {
+      toast.error('Gagal menyimpan data!');
+    }
   };
 
   return (
@@ -80,6 +107,22 @@ const FuelmanDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-6">
+              <Label htmlFor="unit_select">Pilih Unit Transport</Label>
+              <Select value={unloadingData.unit_id} onValueChange={(value) => setUnloadingData({...unloadingData, unit_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih unit transport" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.nomor_unit} - {unit.driver_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4 mb-6">
               <Button
                 variant={activeTab === 'mulai' ? "default" : "outline"}
@@ -115,19 +158,8 @@ const FuelmanDashboard = () => {
                       <Input
                         id="waktuMulai"
                         type="time"
-                        value={unloadingData.waktuMulai}
-                        onChange={(e) => setUnloadingData({...unloadingData, waktuMulai: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="fotoSegelMulai">Upload Foto Segel</Label>
-                      <Input
-                        id="fotoSegelMulai"
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleFileUpload}
+                        value={unloadingData.waktu_mulai}
+                        onChange={(e) => setUnloadingData({...unloadingData, waktu_mulai: e.target.value})}
                       />
                     </div>
 
@@ -152,7 +184,7 @@ const FuelmanDashboard = () => {
 
                     <div>
                       <Label htmlFor="flowmeterA">Pilih Alat Flowmeter</Label>
-                      <Select value={unloadingData.flowmeterA} onValueChange={(value) => setUnloadingData({...unloadingData, flowmeterA: value})}>
+                      <Select value={unloadingData.flowmeter_a} onValueChange={(value) => setUnloadingData({...unloadingData, flowmeter_a: value})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih flowmeter" />
                         </SelectTrigger>
@@ -171,8 +203,8 @@ const FuelmanDashboard = () => {
                       <Input
                         id="fmAwal"
                         type="number"
-                        value={unloadingData.fmAwal}
-                        onChange={(e) => setUnloadingData({...unloadingData, fmAwal: e.target.value})}
+                        value={unloadingData.fm_awal}
+                        onChange={(e) => setUnloadingData({...unloadingData, fm_awal: e.target.value})}
                         placeholder="Masukkan nilai FM awal"
                       />
                     </div>
@@ -180,6 +212,7 @@ const FuelmanDashboard = () => {
                     <Button 
                       onClick={handleSubmitMulai}
                       className="w-full bg-blue-600 hover:bg-blue-700"
+                      disabled={!unloadingData.unit_id}
                     >
                       Simpan Data Mulai Unloading
                     </Button>
@@ -200,19 +233,8 @@ const FuelmanDashboard = () => {
                       <Input
                         id="waktuSelesai"
                         type="time"
-                        value={unloadingData.waktuSelesai}
-                        onChange={(e) => setUnloadingData({...unloadingData, waktuSelesai: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="fotoSegelSelesai">Upload Foto Segel</Label>
-                      <Input
-                        id="fotoSegelSelesai"
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleFileUpload}
+                        value={unloadingData.waktu_selesai}
+                        onChange={(e) => setUnloadingData({...unloadingData, waktu_selesai: e.target.value})}
                       />
                     </div>
 
@@ -237,7 +259,7 @@ const FuelmanDashboard = () => {
 
                     <div>
                       <Label htmlFor="flowmeterB">Pilih Alat Flowmeter B</Label>
-                      <Select value={unloadingData.flowmeterB} onValueChange={(value) => setUnloadingData({...unloadingData, flowmeterB: value})}>
+                      <Select value={unloadingData.flowmeter_b} onValueChange={(value) => setUnloadingData({...unloadingData, flowmeter_b: value})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih flowmeter B" />
                         </SelectTrigger>
@@ -256,8 +278,8 @@ const FuelmanDashboard = () => {
                       <Input
                         id="fmAkhir"
                         type="number"
-                        value={unloadingData.fmAkhir}
-                        onChange={(e) => setUnloadingData({...unloadingData, fmAkhir: e.target.value})}
+                        value={unloadingData.fm_akhir}
+                        onChange={(e) => setUnloadingData({...unloadingData, fm_akhir: e.target.value})}
                         placeholder="Masukkan nilai FM akhir"
                       />
                     </div>
@@ -265,6 +287,7 @@ const FuelmanDashboard = () => {
                     <Button 
                       onClick={handleSubmitSelesai}
                       className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={!unloadingData.unit_id}
                     >
                       Submit Akhir Proses
                     </Button>

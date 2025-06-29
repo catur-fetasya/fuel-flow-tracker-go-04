@@ -8,22 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'active' | 'inactive';
-}
+import { useProfiles } from '../hooks/useProfiles';
 
 const AdminDashboard = () => {
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Pengawas Transportir 1', email: 'pengawas1@fuel.com', role: 'pengawas_transportir', status: 'active' },
-    { id: '2', name: 'Driver Budi', email: 'budi@fuel.com', role: 'driver', status: 'active' },
-    { id: '3', name: 'Pengawas Depo Jakarta', email: 'depo.jkt@fuel.com', role: 'pengawas_depo', status: 'active' },
-  ]);
-
+  const { profiles, loading, createUser } = useProfiles();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -40,31 +28,38 @@ const AdminDashboard = () => {
     { value: 'fuelman', label: 'Fuelman' }
   ];
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.role || !formData.password) {
       toast.error('Semua field harus diisi!');
       return;
     }
 
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      status: 'active'
-    };
-
-    setUsers([...users, newUser]);
-    setFormData({ name: '', email: '', role: '', password: '' });
-    setShowForm(false);
-    toast.success('User berhasil dibuat!');
+    const result = await createUser(formData);
+    if (result) {
+      setFormData({ name: '', email: '', role: '', password: '' });
+      setShowForm(false);
+      toast.success('User berhasil dibuat!');
+    } else {
+      toast.error('Gagal membuat user!');
+    }
   };
 
   const getRoleLabel = (role: string) => {
     const roleObj = roles.find(r => r.value === role);
     return roleObj?.label || role;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-6xl mx-auto">
+          <Header />
+          <div className="text-center mt-8">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -74,26 +69,26 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <Card className="bg-blue-500 text-white">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{users.filter(u => u.role === 'driver').length}</div>
+              <div className="text-2xl font-bold">{profiles.filter(u => u.role === 'driver').length}</div>
               <div className="text-blue-100">Total Driver</div>
             </CardContent>
           </Card>
           <Card className="bg-green-500 text-white">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{users.filter(u => u.role === 'pengawas_transportir').length}</div>
+              <div className="text-2xl font-bold">{profiles.filter(u => u.role === 'pengawas_transportir').length}</div>
               <div className="text-green-100">Pengawas Transportir</div>
             </CardContent>
           </Card>
           <Card className="bg-purple-500 text-white">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{users.filter(u => u.role === 'pengawas_depo').length}</div>
+              <div className="text-2xl font-bold">{profiles.filter(u => u.role === 'pengawas_depo').length}</div>
               <div className="text-purple-100">Pengawas Depo</div>
             </CardContent>
           </Card>
           <Card className="bg-orange-500 text-white">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{users.filter(u => u.status === 'active').length}</div>
-              <div className="text-orange-100">User Aktif</div>
+              <div className="text-2xl font-bold">{profiles.length}</div>
+              <div className="text-orange-100">Total Users</div>
             </CardContent>
           </Card>
         </div>
@@ -177,22 +172,16 @@ const AdminDashboard = () => {
                     <th className="text-left p-2">Nama</th>
                     <th className="text-left p-2">Email</th>
                     <th className="text-left p-2">Role</th>
-                    <th className="text-left p-2">Status</th>
                     <th className="text-left p-2">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 font-medium">{user.name}</td>
-                      <td className="p-2 text-gray-600">{user.email}</td>
+                  {profiles.map((profile) => (
+                    <tr key={profile.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 font-medium">{profile.name}</td>
+                      <td className="p-2 text-gray-600">{profile.email}</td>
                       <td className="p-2">
-                        <Badge variant="outline">{getRoleLabel(user.role)}</Badge>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                        </Badge>
+                        <Badge variant="outline">{getRoleLabel(profile.role)}</Badge>
                       </td>
                       <td className="p-2">
                         <Button variant="outline" size="sm" className="mr-1">
