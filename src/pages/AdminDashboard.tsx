@@ -11,8 +11,9 @@ import { toast } from 'sonner';
 import { useProfiles } from '../hooks/useProfiles';
 
 const AdminDashboard = () => {
-  const { profiles, loading, createUser } = useProfiles();
+  const { profiles, loading, createUser, deleteUser, updateUser } = useProfiles();
   const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -43,6 +44,59 @@ const AdminDashboard = () => {
     } else {
       toast.error('Gagal membuat user!');
     }
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      password: ''
+    });
+    setShowForm(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.role) {
+      toast.error('Nama, email, dan role harus diisi!');
+      return;
+    }
+
+    const updateData = {
+      name: formData.name,
+      email: formData.email,
+      role: formData.role,
+      ...(formData.password && { password: formData.password })
+    };
+
+    const result = await updateUser(editingUser.id, updateData);
+    if (result) {
+      setFormData({ name: '', email: '', role: '', password: '' });
+      setShowForm(false);
+      setEditingUser(null);
+      toast.success('User berhasil diupdate!');
+    } else {
+      toast.error('Gagal mengupdate user!');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus user ${userName}?`)) {
+      const result = await deleteUser(userId);
+      if (result) {
+        toast.success('User berhasil dihapus!');
+      } else {
+        toast.error('Gagal menghapus user!');
+      }
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingUser(null);
+    setFormData({ name: '', email: '', role: '', password: '' });
   };
 
   const getRoleLabel = (role: string) => {
@@ -104,10 +158,12 @@ const AdminDashboard = () => {
             {showForm && (
               <Card className="mb-6 bg-blue-50">
                 <CardHeader>
-                  <CardTitle className="text-lg">Tambah User Baru</CardTitle>
+                  <CardTitle className="text-lg">
+                    {editingUser ? 'Edit User' : 'Tambah User Baru'}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Nama Lengkap</Label>
                       <Input
@@ -143,20 +199,22 @@ const AdminDashboard = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">
+                        Password {editingUser && '(kosongkan jika tidak ingin mengubah)'}
+                      </Label>
                       <Input
                         id="password"
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        placeholder="Masukkan password"
+                        placeholder={editingUser ? "Password baru (opsional)" : "Masukkan password"}
                       />
                     </div>
                     <div className="md:col-span-2">
                       <Button type="submit" className="bg-green-600 hover:bg-green-700 mr-2">
-                        Simpan User
+                        {editingUser ? 'Update User' : 'Simpan User'}
                       </Button>
-                      <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                      <Button type="button" variant="outline" onClick={handleCancelForm}>
                         Batal
                       </Button>
                     </div>
@@ -184,10 +242,15 @@ const AdminDashboard = () => {
                         <Badge variant="outline">{getRoleLabel(profile.role)}</Badge>
                       </td>
                       <td className="p-2">
-                        <Button variant="outline" size="sm" className="mr-1">
+                        <Button variant="outline" size="sm" className="mr-1" onClick={() => handleEditUser(profile)}>
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteUser(profile.id, profile.name)}
+                        >
                           Hapus
                         </Button>
                       </td>

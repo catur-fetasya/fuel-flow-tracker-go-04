@@ -5,12 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+import { useUnits } from '../hooks/useUnits';
+import { useLogs } from '../hooks/useLogs';
 
 const PengawasTransportirDashboard = () => {
   const [activeTab, setActiveTab] = useState('input-unit');
+  const { createUnit } = useUnits();
+  const { createLoadingLog, createSegelLog, createDokumenLog } = useLogs();
+  
   const [unitData, setUnitData] = useState({
     nomorUnit: '',
     namaDriver: ''
@@ -29,14 +33,14 @@ const PengawasTransportirDashboard = () => {
     lokasi: ''
   });
 
-  const handleGetLocation = (target: 'loading' | 'segel') => {
+  const handleGetLocation = (target: 'loading' | 'segel' | 'dokumen') => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const location = `${position.coords.latitude}, ${position.coords.longitude}`;
           if (target === 'loading') {
             setLoadingData({...loadingData, lokasi: location});
-          } else {
+          } else if (target === 'segel') {
             setSegelData({...segelData, lokasi: location});
           }
           toast.success('Lokasi berhasil diambil!');
@@ -58,23 +62,96 @@ const PengawasTransportirDashboard = () => {
     }
   };
 
-  const handleSubmitUnit = (e: React.FormEvent) => {
+  const handleSubmitUnit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unitData.nomorUnit || !unitData.namaDriver) {
       toast.error('Semua field harus diisi!');
       return;
     }
-    toast.success('Data unit berhasil disimpan!');
-    setUnitData({nomorUnit: '', namaDriver: ''});
+
+    const result = await createUnit({
+      nomor_unit: unitData.nomorUnit,
+      driver_name: unitData.namaDriver,
+      pengawas_id: 'current-user-id' // This should come from auth context
+    });
+
+    if (result) {
+      toast.success('Data unit berhasil disimpan!');
+      setUnitData({nomorUnit: '', namaDriver: ''});
+    } else {
+      toast.error('Gagal menyimpan data unit!');
+    }
   };
 
-  const handleSubmitLoading = (e: React.FormEvent) => {
+  const handleSubmitLoading = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loadingData.tanggalMulai || !loadingData.waktuMulai || !loadingData.lokasi) {
-      toast.error('Semua field harus diisi!');
+      toast.error('Tanggal mulai, waktu mulai, dan lokasi harus diisi!');
       return;
     }
-    toast.success('Data loading berhasil disimpan!');
+
+    const waktuMulai = new Date(`${loadingData.tanggalMulai}T${loadingData.waktuMulai}`).toISOString();
+    const waktuSelesai = loadingData.tanggalSelesai && loadingData.waktuSelesai 
+      ? new Date(`${loadingData.tanggalSelesai}T${loadingData.waktuSelesai}`).toISOString()
+      : null;
+
+    const result = await createLoadingLog({
+      waktu_mulai: waktuMulai,
+      waktu_selesai: waktuSelesai,
+      lokasi: loadingData.lokasi
+    });
+
+    if (result) {
+      toast.success('Data loading berhasil disimpan!');
+      setLoadingData({
+        tanggalMulai: '',
+        waktuMulai: '',
+        tanggalSelesai: '',
+        waktuSelesai: '',
+        lokasi: ''
+      });
+    } else {
+      toast.error('Gagal menyimpan loading log!');
+    }
+  };
+
+  const handleSubmitSegel = async () => {
+    if (!segelData.nomorSegel1 || !segelData.lokasi) {
+      toast.error('Nomor segel dan lokasi harus diisi!');
+      return;
+    }
+
+    const result = await createSegelLog({
+      nomor_segel_1: segelData.nomorSegel1,
+      nomor_segel_2: segelData.nomorSegel2,
+      lokasi: segelData.lokasi,
+      foto_segel_url: segelData.fotoSegel ? 'uploaded' : null
+    });
+
+    if (result) {
+      toast.success('Segel log berhasil disimpan!');
+      setSegelData({
+        fotoSegel: null,
+        nomorSegel1: '',
+        nomorSegel2: '',
+        lokasi: ''
+      });
+    } else {
+      toast.error('Gagal menyimpan segel log!');
+    }
+  };
+
+  const handleSubmitDokumen = async () => {
+    const result = await createDokumenLog({
+      lokasi: 'current-location', // This should be captured from location
+      catatan: 'Dokumen dari pengawas transportir'
+    });
+
+    if (result) {
+      toast.success('Dokumen berhasil disimpan!');
+    } else {
+      toast.error('Gagal menyimpan dokumen!');
+    }
   };
 
   const tabs = [
@@ -279,7 +356,7 @@ const PengawasTransportirDashboard = () => {
                         </Button>
                       </div>
                     </div>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSubmitSegel}>
                       Simpan Segel Log
                     </Button>
                   </div>
@@ -335,13 +412,14 @@ const PengawasTransportirDashboard = () => {
                         />
                         <Button 
                           type="button" 
+                          onClick={() => handleGetLocation('dokumen')}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           📍 Get Location
                         </Button>
                       </div>
                     </div>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSubmitDokumen}>
                       Simpan Dokumen
                     </Button>
                   </div>

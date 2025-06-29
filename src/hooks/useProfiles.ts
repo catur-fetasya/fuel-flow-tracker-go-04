@@ -53,6 +53,43 @@ export const useProfiles = () => {
     }
   };
 
+  const updateUser = async (userId: string, userData: {
+    name: string;
+    email: string;
+    role: string;
+    password?: string;
+  }) => {
+    if (!user || user.role !== 'admin') return null;
+
+    try {
+      const response = await apiClient.updateProfile(userId, userData);
+      if (response.success) {
+        await fetchProfiles(); // Refresh the list
+        return response.user;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return null;
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (!user || user.role !== 'admin') return null;
+
+    try {
+      const response = await apiClient.deleteProfile(userId);
+      if (response.success) {
+        await fetchProfiles(); // Refresh the list
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchProfiles();
   }, [user]);
@@ -61,6 +98,8 @@ export const useProfiles = () => {
     profiles,
     loading,
     fetchProfiles,
-    createUser
+    createUser,
+    updateUser,
+    deleteUser
   };
 };

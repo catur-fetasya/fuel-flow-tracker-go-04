@@ -91,6 +91,19 @@ class ApiClient {
     });
   }
 
+  async updateProfile(id: string, data: any) {
+    return this.request(`/api/profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProfile(id: string) {
+    return this.request(`/api/profiles/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Unit methods
   async getUnits() {
     return this.request('/api/units');

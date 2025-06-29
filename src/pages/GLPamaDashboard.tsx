@@ -19,6 +19,7 @@ interface TransportData {
 
 const GLPamaDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTransport, setSelectedTransport] = useState<TransportData | null>(null);
   const [transportData] = useState<TransportData[]>([
     {
       id: '1',
@@ -63,11 +64,66 @@ const GLPamaDashboard = () => {
   };
 
   const handleExportPDF = () => {
+    // Generate CSV data for demonstration
+    const csvData = transportData.map(item => ({
+      'Nomor Unit': item.nomorUnit,
+      'Driver': item.driver,
+      'Tujuan': item.tujuan,
+      'Status': item.status,
+      'Progress': `${item.progress}%`,
+      'Tanggal': item.tanggal
+    }));
+
+    // Convert to CSV string
+    const headers = Object.keys(csvData[0]).join(',');
+    const rows = csvData.map(row => Object.values(row).join(',')).join('\n');
+    const csvContent = `${headers}\n${rows}`;
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transport-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     toast.success('Laporan PDF berhasil didownload!');
   };
 
   const handleExportExcel = () => {
+    // Generate Excel-compatible CSV
+    const csvData = transportData.map(item => ({
+      'Nomor Unit': item.nomorUnit,
+      'Driver': item.driver,
+      'Tujuan': item.tujuan,
+      'Status': item.status,
+      'Progress': `${item.progress}%`,
+      'Tanggal': item.tanggal
+    }));
+
+    const headers = Object.keys(csvData[0]).join('\t');
+    const rows = csvData.map(row => Object.values(row).join('\t')).join('\n');
+    const excelContent = `${headers}\n${rows}`;
+
+    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transport-report-${new Date().toISOString().split('T')[0]}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     toast.success('Laporan Excel berhasil didownload!');
+  };
+
+  const handleViewDetail = (transport: TransportData) => {
+    setSelectedTransport(transport);
+    toast.info(`Menampilkan detail untuk ${transport.nomorUnit}`);
   };
 
   const filteredData = transportData.filter(item =>
@@ -173,7 +229,7 @@ const GLPamaDashboard = () => {
                       </td>
                       <td className="p-3">{item.tanggal}</td>
                       <td className="p-3">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleViewDetail(item)}>
                           Detail
                         </Button>
                       </td>
@@ -182,6 +238,40 @@ const GLPamaDashboard = () => {
                 </tbody>
               </table>
             </div>
+
+            {selectedTransport && (
+              <Card className="mt-6 bg-blue-50">
+                <CardHeader>
+                  <CardTitle>Detail Transport: {selectedTransport.nomorUnit}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <strong>Driver:</strong> {selectedTransport.driver}
+                    </div>
+                    <div>
+                      <strong>Tujuan:</strong> {selectedTransport.tujuan}
+                    </div>
+                    <div>
+                      <strong>Status:</strong> {selectedTransport.status}
+                    </div>
+                    <div>
+                      <strong>Progress:</strong> {selectedTransport.progress}%
+                    </div>
+                    <div>
+                      <strong>Tanggal:</strong> {selectedTransport.tanggal}
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4" 
+                    onClick={() => setSelectedTransport(null)}
+                  >
+                    Tutup Detail
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {transportData.filter(t => t.status === 'MSF Completed').length > 0 && (
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">

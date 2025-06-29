@@ -7,10 +7,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+import { useLogs } from '../hooks/useLogs';
 
 const DriverDashboard = () => {
   const [activeTab, setActiveTab] = useState('loading');
   const [location, setLocation] = useState('');
+  const { createLoadingLog, createKeluarPertaminaLog, createSegelLog, createDokumenLog } = useLogs();
+
+  const [loadingFormData, setLoadingFormData] = useState({
+    tanggalMulai: '',
+    waktuMulai: '',
+    tanggalSelesai: '',
+    waktuSelesai: ''
+  });
+
+  const [keluarFormData, setKeluarFormData] = useState({
+    tanggalKeluar: '',
+    waktuKeluar: ''
+  });
+
+  const [unloadingFormData, setUnloadingFormData] = useState({
+    waktuMulaiUnload: '',
+    waktuSelesaiUnload: '',
+    fotoSegel: null as File | null
+  });
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
@@ -26,6 +46,105 @@ const DriverDashboard = () => {
       );
     } else {
       toast.error('Geolocation tidak didukung browser ini!');
+    }
+  };
+
+  const handleSimpanLoadingLog = async () => {
+    if (!loadingFormData.tanggalMulai || !loadingFormData.waktuMulai || !location) {
+      toast.error('Tanggal mulai, waktu mulai, dan lokasi harus diisi!');
+      return;
+    }
+
+    const waktuMulai = new Date(`${loadingFormData.tanggalMulai}T${loadingFormData.waktuMulai}`).toISOString();
+    const waktuSelesai = loadingFormData.tanggalSelesai && loadingFormData.waktuSelesai 
+      ? new Date(`${loadingFormData.tanggalSelesai}T${loadingFormData.waktuSelesai}`).toISOString()
+      : null;
+
+    const result = await createLoadingLog({
+      waktu_mulai: waktuMulai,
+      waktu_selesai: waktuSelesai,
+      lokasi: location
+    });
+
+    if (result) {
+      toast.success('Loading log berhasil disimpan!');
+      setLoadingFormData({ tanggalMulai: '', waktuMulai: '', tanggalSelesai: '', waktuSelesai: '' });
+      setLocation('');
+    } else {
+      toast.error('Gagal menyimpan loading log!');
+    }
+  };
+
+  const handleSimpanWaktuKeluar = async () => {
+    if (!keluarFormData.tanggalKeluar || !keluarFormData.waktuKeluar || !location) {
+      toast.error('Tanggal, waktu, dan lokasi harus diisi!');
+      return;
+    }
+
+    const waktuKeluar = new Date(`${keluarFormData.tanggalKeluar}T${keluarFormData.waktuKeluar}`).toISOString();
+
+    const result = await createKeluarPertaminaLog({
+      waktu_keluar: waktuKeluar,
+      lokasi: location
+    });
+
+    if (result) {
+      toast.success('Waktu keluar berhasil disimpan!');
+      setKeluarFormData({ tanggalKeluar: '', waktuKeluar: '' });
+      setLocation('');
+    } else {
+      toast.error('Gagal menyimpan waktu keluar!');
+    }
+  };
+
+  const handleSubmitFTUnloading = async () => {
+    if (!unloadingFormData.waktuMulaiUnload || !unloadingFormData.waktuSelesaiUnload || !location) {
+      toast.error('Waktu mulai, waktu selesai, dan lokasi harus diisi!');
+      return;
+    }
+
+    // For now, we'll store this in a general log format
+    const result = await createDokumenLog({
+      waktu_mulai_unload: unloadingFormData.waktuMulaiUnload,
+      waktu_selesai_unload: unloadingFormData.waktuSelesaiUnload,
+      lokasi: location,
+      foto_segel_url: unloadingFormData.fotoSegel ? 'uploaded' : null
+    });
+
+    if (result) {
+      toast.success('FT Unloading berhasil disubmit!');
+      setUnloadingFormData({ waktuMulaiUnload: '', waktuSelesaiUnload: '', fotoSegel: null });
+      setLocation('');
+    } else {
+      toast.error('Gagal submit FT Unloading!');
+    }
+  };
+
+  const handleSimpanSegelLog = async () => {
+    const result = await createSegelLog({
+      lokasi: location,
+      catatan: 'Segel log dari driver'
+    });
+
+    if (result) {
+      toast.success('Segel log berhasil disimpan!');
+      setLocation('');
+    } else {
+      toast.error('Gagal menyimpan segel log!');
+    }
+  };
+
+  const handleSimpanDokumen = async () => {
+    const result = await createDokumenLog({
+      lokasi: location,
+      catatan: 'Dokumen dari driver'
+    });
+
+    if (result) {
+      toast.success('Dokumen berhasil disimpan!');
+      setLocation('');
+    } else {
+      toast.error('Gagal menyimpan dokumen!');
     }
   };
 
@@ -76,19 +195,39 @@ const DriverDashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="tanggalMulai">Tanggal Mulai Loading</Label>
-                        <Input id="tanggalMulai" type="date" />
+                        <Input 
+                          id="tanggalMulai" 
+                          type="date" 
+                          value={loadingFormData.tanggalMulai}
+                          onChange={(e) => setLoadingFormData({...loadingFormData, tanggalMulai: e.target.value})}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="waktuMulai">Waktu Mulai Loading</Label>
-                        <Input id="waktuMulai" type="time" />
+                        <Input 
+                          id="waktuMulai" 
+                          type="time" 
+                          value={loadingFormData.waktuMulai}
+                          onChange={(e) => setLoadingFormData({...loadingFormData, waktuMulai: e.target.value})}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="tanggalSelesai">Tanggal Selesai Loading</Label>
-                        <Input id="tanggalSelesai" type="date" />
+                        <Input 
+                          id="tanggalSelesai" 
+                          type="date" 
+                          value={loadingFormData.tanggalSelesai}
+                          onChange={(e) => setLoadingFormData({...loadingFormData, tanggalSelesai: e.target.value})}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="waktuSelesai">Waktu Selesai Loading</Label>
-                        <Input id="waktuSelesai" type="time" />
+                        <Input 
+                          id="waktuSelesai" 
+                          type="time" 
+                          value={loadingFormData.waktuSelesai}
+                          onChange={(e) => setLoadingFormData({...loadingFormData, waktuSelesai: e.target.value})}
+                        />
                       </div>
                     </div>
                     <div>
@@ -109,7 +248,7 @@ const DriverDashboard = () => {
                         </Button>
                       </div>
                     </div>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSimpanLoadingLog}>
                       Simpan Loading Log
                     </Button>
                   </div>
@@ -127,11 +266,21 @@ const DriverDashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="tanggalKeluar">Tanggal Keluar</Label>
-                        <Input id="tanggalKeluar" type="date" />
+                        <Input 
+                          id="tanggalKeluar" 
+                          type="date" 
+                          value={keluarFormData.tanggalKeluar}
+                          onChange={(e) => setKeluarFormData({...keluarFormData, tanggalKeluar: e.target.value})}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="waktuKeluar">Waktu Keluar</Label>
-                        <Input id="waktuKeluar" type="time" />
+                        <Input 
+                          id="waktuKeluar" 
+                          type="time" 
+                          value={keluarFormData.waktuKeluar}
+                          onChange={(e) => setKeluarFormData({...keluarFormData, waktuKeluar: e.target.value})}
+                        />
                       </div>
                     </div>
                     <div>
@@ -152,7 +301,7 @@ const DriverDashboard = () => {
                         </Button>
                       </div>
                     </div>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSimpanWaktuKeluar}>
                       Simpan Waktu Keluar
                     </Button>
                   </div>
@@ -170,11 +319,21 @@ const DriverDashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="waktuMulaiUnload">Waktu Mulai Unloading</Label>
-                        <Input id="waktuMulaiUnload" type="time" />
+                        <Input 
+                          id="waktuMulaiUnload" 
+                          type="time" 
+                          value={unloadingFormData.waktuMulaiUnload}
+                          onChange={(e) => setUnloadingFormData({...unloadingFormData, waktuMulaiUnload: e.target.value})}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="waktuSelesaiUnload">Waktu Selesai Unloading</Label>
-                        <Input id="waktuSelesaiUnload" type="time" />
+                        <Input 
+                          id="waktuSelesaiUnload" 
+                          type="time" 
+                          value={unloadingFormData.waktuSelesaiUnload}
+                          onChange={(e) => setUnloadingFormData({...unloadingFormData, waktuSelesaiUnload: e.target.value})}
+                        />
                       </div>
                     </div>
                     <div>
@@ -184,6 +343,7 @@ const DriverDashboard = () => {
                         type="file"
                         accept="image/*"
                         capture="environment"
+                        onChange={(e) => setUnloadingFormData({...unloadingFormData, fotoSegel: e.target.files?.[0] || null})}
                       />
                     </div>
                     <div>
@@ -204,7 +364,7 @@ const DriverDashboard = () => {
                         </Button>
                       </div>
                     </div>
-                    <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                    <Button className="w-full bg-orange-600 hover:bg-orange-700" onClick={handleSubmitFTUnloading}>
                       Submit FT Unloading
                     </Button>
                   </div>
@@ -212,21 +372,69 @@ const DriverDashboard = () => {
               </Card>
             )}
 
-            {/* Similar structure for other tabs */}
-            {(activeTab === 'segel' || activeTab === 'dokumen') && (
+            {activeTab === 'segel' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    {activeTab === 'segel' ? '🔒 Segel Log' : '📄 Dokumen Pengangkutan'}
-                  </CardTitle>
+                  <CardTitle>🔒 Segel Log</CardTitle>
                   <p className="text-sm text-gray-600">Form ini diisi bersama dengan Pengawas Transportir</p>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                    <p className="text-yellow-800">
-                      ⚠️ Form ini akan diisi bersama dengan Pengawas Transportir.
-                      Silakan koordinasi dengan Pengawas untuk melanjutkan proses ini.
-                    </p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="lokasiSegel">Lokasi</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="lokasiSegel"
+                          value={location}
+                          placeholder="Koordinat lokasi akan muncul di sini"
+                          readOnly
+                        />
+                        <Button 
+                          type="button" 
+                          onClick={handleGetLocation}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          📍 Get Location
+                        </Button>
+                      </div>
+                    </div>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSimpanSegelLog}>
+                      Simpan Segel Log
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === 'dokumen' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>📄 Dokumen Pengangkutan</CardTitle>
+                  <p className="text-sm text-gray-600">Form ini diisi bersama dengan Pengawas Transportir</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="lokasiDokumen">Lokasi</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="lokasiDokumen"
+                          value={location}
+                          placeholder="Koordinat lokasi akan muncul di sini"
+                          readOnly
+                        />
+                        <Button 
+                          type="button" 
+                          onClick={handleGetLocation}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          📍 Get Location
+                        </Button>
+                      </div>
+                    </div>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleSimpanDokumen}>
+                      Simpan Dokumen
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
