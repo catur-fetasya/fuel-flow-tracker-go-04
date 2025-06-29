@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
+import Index from "./pages/Index";
 import AdminDashboard from "./pages/AdminDashboard";
 import PengawasTransportirDashboard from "./pages/PengawasTransportirDashboard";
 import DriverDashboard from "./pages/DriverDashboard";
@@ -28,7 +29,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={
               <ProtectedRoute>
-                <AdminDashboard />
+                <Index />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
