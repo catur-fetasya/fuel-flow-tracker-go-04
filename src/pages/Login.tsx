@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -19,7 +22,7 @@ const Login = () => {
     email: '',
     password: '',
     name: '',
-    role: ''
+    role: '' as UserRole | ''
   });
   const { isAuthenticated, login } = useAuth();
 
@@ -78,7 +81,7 @@ const Login = () => {
             id: data.user.id,
             email: registerData.email,
             name: registerData.name,
-            role: registerData.role
+            role: registerData.role as UserRole
           });
 
         if (profileError) {
@@ -98,7 +101,7 @@ const Login = () => {
 
   const createDemoUsers = async () => {
     setIsLoading(true);
-    const demoUsers = [
+    const demoUsers: Array<{ email: string; password: string; name: string; role: UserRole }> = [
       { email: 'admin@fuel.com', password: 'admin123', name: 'Admin User', role: 'admin' },
       { email: 'driver@fuel.com', password: 'driver123', name: 'Driver User', role: 'driver' },
       { email: 'fuelman@fuel.com', password: 'fuelman123', name: 'Fuelman User', role: 'fuelman' }
@@ -221,7 +224,7 @@ const Login = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-role">Role</Label>
-                <Select value={registerData.role} onValueChange={(value) => setRegisterData({...registerData, role: value})}>
+                <Select value={registerData.role} onValueChange={(value) => setRegisterData({...registerData, role: value as UserRole})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih role" />
                   </SelectTrigger>
