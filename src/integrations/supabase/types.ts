@@ -446,6 +446,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_demo_user: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
