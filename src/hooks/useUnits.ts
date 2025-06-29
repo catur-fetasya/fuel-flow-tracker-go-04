@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface Unit {
@@ -23,16 +23,7 @@ export const useUnits = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('units')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching units:', error);
-        return;
-      }
-
+      const data = await apiClient.getUnits();
       setUnits(data || []);
     } catch (error) {
       console.error('Error fetching units:', error);
@@ -45,19 +36,12 @@ export const useUnits = () => {
     if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('units')
-        .insert([{ ...unitData, pengawas_id: user.id }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating unit:', error);
-        return null;
+      const response = await apiClient.createUnit(unitData);
+      if (response.success) {
+        await fetchUnits();
+        return response.unit;
       }
-
-      await fetchUnits();
-      return data;
+      return null;
     } catch (error) {
       console.error('Error creating unit:', error);
       return null;

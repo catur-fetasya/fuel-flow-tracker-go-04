@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface LoadingLog {
@@ -55,18 +55,8 @@ export const useLogs = () => {
     if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('loading_logs')
-        .insert([{ ...logData, created_by: user.id }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating loading log:', error);
-        return null;
-      }
-
-      return data;
+      const response = await apiClient.createLoadingLog(logData);
+      return response.success ? { id: response.id } : null;
     } catch (error) {
       console.error('Error creating loading log:', error);
       return null;
@@ -77,18 +67,8 @@ export const useLogs = () => {
     if (!user || user.role !== 'fuelman') return null;
 
     try {
-      const { data, error } = await supabase
-        .from('fuelman_logs')
-        .insert([{ ...logData, created_by: user.id }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating fuelman log:', error);
-        return null;
-      }
-
-      return data;
+      const response = await apiClient.createFuelmanLog(logData);
+      return response.success ? { id: response.id } : null;
     } catch (error) {
       console.error('Error creating fuelman log:', error);
       return null;
@@ -99,18 +79,8 @@ export const useLogs = () => {
     if (!user || user.role !== 'pengawas_depo') return null;
 
     try {
-      const { data, error } = await supabase
-        .from('pengawas_depo_logs')
-        .insert([{ ...logData, created_by: user.id }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating depo log:', error);
-        return null;
-      }
-
-      return data;
+      const response = await apiClient.createPengawasDepoLog(logData);
+      return response.success ? { id: response.id } : null;
     } catch (error) {
       console.error('Error creating depo log:', error);
       return null;
@@ -121,23 +91,8 @@ export const useLogs = () => {
     if (!user || user.role !== 'fuelman') return;
 
     try {
-      const { data, error } = await supabase
-        .from('fuelman_logs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching fuelman logs:', error);
-        return;
-      }
-
-      // Type cast the data to ensure proper typing
-      const typedData = (data || []).map(log => ({
-        ...log,
-        status: log.status as 'mulai' | 'selesai'
-      }));
-
-      setFuelmanLogs(typedData);
+      const data = await apiClient.getFuelmanLogs();
+      setFuelmanLogs(data || []);
     } catch (error) {
       console.error('Error fetching fuelman logs:', error);
     }

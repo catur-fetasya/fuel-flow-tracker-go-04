@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { apiClient } from '@/lib/api';
 
 export type UserRole = 'admin' | 'pengawas_transportir' | 'driver' | 'pengawas_depo' | 'gl_pama' | 'fuelman';
 
@@ -35,88 +34,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
-        setLoading(false);
+    // Check if user is already logged in
+    const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('user_data');
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
       }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    
+    setLoading(false);
   }, []);
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        setLoading(false);
-        return;
+      setLoading(true);
+      const response = await apiClient.login(email, password);
+      
+      if (response.success) {
+        setUser(response.user);
+        return true;
       }
-
-      if (profile) {
-        setUser({
-          id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          role: profile.role as UserRole
-        });
-      }
+      
+      return false;
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Login error:', error);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        setLoading(false);
-        return false;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user);
-        return true;
-      }
-
-      setLoading(false);
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      setLoading(false);
-      return false;
-    }
-  };
-
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await apiClient.logout();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);

@@ -2,10 +2,9 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import { apiClient } from '@/lib/api';
 
-type UserRole = Database['public']['Enums']['user_role'];
+type UserRole = 'admin' | 'pengawas_transportir' | 'driver' | 'pengawas_depo' | 'gl_pama' | 'fuelman';
 
 export const useAuthActions = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,43 +39,25 @@ export const useAuthActions = () => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const response = await apiClient.register({
         email: registerData.email,
         password: registerData.password,
-        options: {
-          data: {
-            name: registerData.name,
-          }
-        }
+        name: registerData.name,
+        role: registerData.role as string
       });
 
-      if (error) {
-        toast.error('Gagal membuat akun: ' + error.message);
+      if (response.success) {
+        toast.success('Akun berhasil dibuat!');
+        setIsLoading(false);
+        return true;
+      } else {
+        toast.error('Gagal membuat akun!');
         setIsLoading(false);
         return false;
       }
-
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: registerData.email,
-            name: registerData.name,
-            role: registerData.role as UserRole
-          });
-
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-        }
-      }
-
-      toast.success('Akun berhasil dibuat!');
-      setIsLoading(false);
-      return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error('Terjadi kesalahan saat membuat akun');
+      toast.error('Terjadi kesalahan saat membuat akun: ' + error.message);
       setIsLoading(false);
       return false;
     }
@@ -93,23 +74,8 @@ export const useAuthActions = () => {
     let successCount = 0;
     for (const user of demoUsers) {
       try {
-        const { data, error } = await supabase.auth.signUp({
-          email: user.email,
-          password: user.password,
-          options: {
-            data: { name: user.name }
-          }
-        });
-
-        if (!error && data.user) {
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              email: user.email,
-              name: user.name,
-              role: user.role
-            });
+        const response = await apiClient.register(user);
+        if (response.success) {
           successCount++;
         }
       } catch (error) {
