@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { useLogs } from '../hooks/useLogs';
 const DriverDashboard = () => {
   const [activeTab, setActiveTab] = useState('loading');
   const [location, setLocation] = useState('');
+  const [currentUnitId, setCurrentUnitId] = useState('unit-001'); // Mock unit ID for demo
   const { createLoadingLog, createKeluarPertaminaLog, createSegelLog, createDokumenLog } = useLogs();
 
   const [loadingFormData, setLoadingFormData] = useState({
@@ -55,14 +55,12 @@ const DriverDashboard = () => {
       return;
     }
 
-    const waktuMulai = new Date(`${loadingFormData.tanggalMulai}T${loadingFormData.waktuMulai}`).toISOString();
-    const waktuSelesai = loadingFormData.tanggalSelesai && loadingFormData.waktuSelesai 
-      ? new Date(`${loadingFormData.tanggalSelesai}T${loadingFormData.waktuSelesai}`).toISOString()
-      : null;
-
     const result = await createLoadingLog({
-      waktu_mulai: waktuMulai,
-      waktu_selesai: waktuSelesai,
+      unit_id: currentUnitId,
+      tanggal_mulai: loadingFormData.tanggalMulai,
+      waktu_mulai: loadingFormData.waktuMulai,
+      tanggal_selesai: loadingFormData.tanggalSelesai || undefined,
+      waktu_selesai: loadingFormData.waktuSelesai || undefined,
       lokasi: location
     });
 
@@ -81,10 +79,10 @@ const DriverDashboard = () => {
       return;
     }
 
-    const waktuKeluar = new Date(`${keluarFormData.tanggalKeluar}T${keluarFormData.waktuKeluar}`).toISOString();
-
     const result = await createKeluarPertaminaLog({
-      waktu_keluar: waktuKeluar,
+      unit_id: currentUnitId,
+      tanggal_keluar: keluarFormData.tanggalKeluar,
+      waktu_keluar: keluarFormData.waktuKeluar,
       lokasi: location
     });
 
@@ -103,12 +101,10 @@ const DriverDashboard = () => {
       return;
     }
 
-    // For now, we'll store this in a general log format
     const result = await createDokumenLog({
-      waktu_mulai_unload: unloadingFormData.waktuMulaiUnload,
-      waktu_selesai_unload: unloadingFormData.waktuSelesaiUnload,
+      unit_id: currentUnitId,
       lokasi: location,
-      foto_segel_url: unloadingFormData.fotoSegel ? 'uploaded' : null
+      foto_sampel_url: unloadingFormData.fotoSegel ? 'uploaded' : undefined
     });
 
     if (result) {
@@ -121,9 +117,14 @@ const DriverDashboard = () => {
   };
 
   const handleSimpanSegelLog = async () => {
+    if (!location) {
+      toast.error('Lokasi harus diisi!');
+      return;
+    }
+
     const result = await createSegelLog({
-      lokasi: location,
-      catatan: 'Segel log dari driver'
+      unit_id: currentUnitId,
+      lokasi: location
     });
 
     if (result) {
@@ -135,9 +136,14 @@ const DriverDashboard = () => {
   };
 
   const handleSimpanDokumen = async () => {
+    if (!location) {
+      toast.error('Lokasi harus diisi!');
+      return;
+    }
+
     const result = await createDokumenLog({
-      lokasi: location,
-      catatan: 'Dokumen dari driver'
+      unit_id: currentUnitId,
+      lokasi: location
     });
 
     if (result) {

@@ -44,10 +44,45 @@ export interface PengawasDepoLog {
   created_at: string;
 }
 
+export interface SegelLog {
+  id: string;
+  unit_id: string;
+  foto_segel_url?: string;
+  nomor_segel_1?: string;
+  nomor_segel_2?: string;
+  lokasi: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface KeluarPertaminaLog {
+  id: string;
+  unit_id: string;
+  tanggal_keluar: string;
+  waktu_keluar: string;
+  lokasi: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface DokumenLog {
+  id: string;
+  unit_id: string;
+  foto_sampel_url?: string;
+  foto_do_url?: string;
+  foto_surat_jalan_url?: string;
+  lokasi: string;
+  created_by: string;
+  created_at: string;
+}
+
 export const useLogs = () => {
   const [loadingLogs, setLoadingLogs] = useState<LoadingLog[]>([]);
   const [fuelmanLogs, setFuelmanLogs] = useState<FuelmanLog[]>([]);
   const [depoLogs, setDepoLogs] = useState<PengawasDepoLog[]>([]);
+  const [segelLogs, setSegelLogs] = useState<SegelLog[]>([]);
+  const [keluarLogs, setKeluarLogs] = useState<KeluarPertaminaLog[]>([]);
+  const [dokumenLogs, setDokumenLogs] = useState<DokumenLog[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -87,6 +122,42 @@ export const useLogs = () => {
     }
   };
 
+  const createSegelLog = async (logData: Omit<SegelLog, 'id' | 'created_by' | 'created_at'>) => {
+    if (!user) return null;
+
+    try {
+      const response = await apiClient.createSegelLog(logData);
+      return response.success ? { id: response.id } : null;
+    } catch (error) {
+      console.error('Error creating segel log:', error);
+      return null;
+    }
+  };
+
+  const createKeluarPertaminaLog = async (logData: Omit<KeluarPertaminaLog, 'id' | 'created_by' | 'created_at'>) => {
+    if (!user) return null;
+
+    try {
+      const response = await apiClient.createKeluarPertaminaLog(logData);
+      return response.success ? { id: response.id } : null;
+    } catch (error) {
+      console.error('Error creating keluar pertamina log:', error);
+      return null;
+    }
+  };
+
+  const createDokumenLog = async (logData: Omit<DokumenLog, 'id' | 'created_by' | 'created_at'>) => {
+    if (!user) return null;
+
+    try {
+      const response = await apiClient.createDokumenLog(logData);
+      return response.success ? { id: response.id } : null;
+    } catch (error) {
+      console.error('Error creating dokumen log:', error);
+      return null;
+    }
+  };
+
   const fetchFuelmanLogs = async () => {
     if (!user || user.role !== 'fuelman') return;
 
@@ -109,10 +180,16 @@ export const useLogs = () => {
     loadingLogs,
     fuelmanLogs,
     depoLogs,
+    segelLogs,
+    keluarLogs,
+    dokumenLogs,
     loading,
     createLoadingLog,
     createFuelmanLog,
     createDepoLog,
+    createSegelLog,
+    createKeluarPertaminaLog,
+    createDokumenLog,
     fetchFuelmanLogs
   };
 };

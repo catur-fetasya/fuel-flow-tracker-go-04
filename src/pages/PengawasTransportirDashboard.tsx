@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { useLogs } from '../hooks/useLogs';
 
 const PengawasTransportirDashboard = () => {
   const [activeTab, setActiveTab] = useState('input-unit');
+  const [currentUnitId, setCurrentUnitId] = useState('unit-001'); // Mock unit ID for demo
   const { createUnit } = useUnits();
   const { createLoadingLog, createSegelLog, createDokumenLog } = useLogs();
   
@@ -77,6 +77,7 @@ const PengawasTransportirDashboard = () => {
 
     if (result) {
       toast.success('Data unit berhasil disimpan!');
+      setCurrentUnitId(result.id || 'unit-001');
       setUnitData({nomorUnit: '', namaDriver: ''});
     } else {
       toast.error('Gagal menyimpan data unit!');
@@ -90,14 +91,12 @@ const PengawasTransportirDashboard = () => {
       return;
     }
 
-    const waktuMulai = new Date(`${loadingData.tanggalMulai}T${loadingData.waktuMulai}`).toISOString();
-    const waktuSelesai = loadingData.tanggalSelesai && loadingData.waktuSelesai 
-      ? new Date(`${loadingData.tanggalSelesai}T${loadingData.waktuSelesai}`).toISOString()
-      : null;
-
     const result = await createLoadingLog({
-      waktu_mulai: waktuMulai,
-      waktu_selesai: waktuSelesai,
+      unit_id: currentUnitId,
+      tanggal_mulai: loadingData.tanggalMulai,
+      waktu_mulai: loadingData.waktuMulai,
+      tanggal_selesai: loadingData.tanggalSelesai || undefined,
+      waktu_selesai: loadingData.waktuSelesai || undefined,
       lokasi: loadingData.lokasi
     });
 
@@ -122,10 +121,11 @@ const PengawasTransportirDashboard = () => {
     }
 
     const result = await createSegelLog({
+      unit_id: currentUnitId,
       nomor_segel_1: segelData.nomorSegel1,
       nomor_segel_2: segelData.nomorSegel2,
       lokasi: segelData.lokasi,
-      foto_segel_url: segelData.fotoSegel ? 'uploaded' : null
+      foto_segel_url: segelData.fotoSegel ? 'uploaded' : undefined
     });
 
     if (result) {
@@ -143,8 +143,8 @@ const PengawasTransportirDashboard = () => {
 
   const handleSubmitDokumen = async () => {
     const result = await createDokumenLog({
-      lokasi: 'current-location', // This should be captured from location
-      catatan: 'Dokumen dari pengawas transportir'
+      unit_id: currentUnitId,
+      lokasi: 'current-location' // This should be captured from location
     });
 
     if (result) {
