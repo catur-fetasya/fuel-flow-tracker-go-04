@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 export interface Profile {
   id: string;
   email: string;
   name: string;
-  role: string;
+  role: UserRole;
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +32,13 @@ export const useProfiles = () => {
         return;
       }
 
-      setProfiles(data || []);
+      // Type cast the role field to ensure proper typing
+      const typedData = (data || []).map(profile => ({
+        ...profile,
+        role: profile.role as UserRole
+      }));
+
+      setProfiles(typedData);
     } catch (error) {
       console.error('Error fetching profiles:', error);
     } finally {
@@ -61,7 +67,7 @@ export const useProfiles = () => {
         .from('profiles')
         .update({ 
           name: userData.name,
-          role: userData.role 
+          role: userData.role as UserRole
         })
         .eq('id', authData.user.id)
         .select()

@@ -131,7 +131,13 @@ export const useLogs = () => {
         return;
       }
 
-      setFuelmanLogs(data || []);
+      // Type cast the data to ensure proper typing
+      const typedData = (data || []).map(log => ({
+        ...log,
+        status: log.status as 'mulai' | 'selesai'
+      }));
+
+      setFuelmanLogs(typedData);
     } catch (error) {
       console.error('Error fetching fuelman logs:', error);
     }
